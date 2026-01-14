@@ -1,126 +1,109 @@
-# forumhub-project
-forumhub-project
 
-*   groupId: `io.github.brunomuria`
-*   Autor/README: “Bruno Muria  — GitHub: @brunomuria"
-*   Docker Compose (MySQL + App)
-*   Testes automatizados (JUnit/Mockito)
+# 📚 FórumHub API
 
-*   # Stack & Build
+API REST em **Spring Boot 3** para gerenciamento de tópicos de fórum. Inclui **CRUD completo**, **MySQL + Flyway**, **JWT** (Auth0) e **Swagger UI** (springdoc). 
 
-*   *   **Java 17**, **Spring Boot 3**
-*   Maven (build pronto)
-*   Spring Web, Spring Data JPA, Spring Validation
-*   Spring Security + **JWT** (Auth0 `java-jwt`)
-*   MySQL + **Flyway** (migrations versionadas)
-*   Swagger/OpenAPI (**springdoc**)
-*   **JUnit 5 + Mockito** (testes unitários)
-*   **Dockerfile** (multi-stage) + **docker-compose.yml** (MySQL + App)
+**Autor:** Bruno Daniel Muria de Farias · GitHub: [@brunomuria](https://github.com/brunomuria)
 
-groupId e README
+## ✅ Funcionalidades
+- Autenticação JWT (`POST /login`)
+- Tópicos: criar, listar (pagina/ordenar/filtrar), detalhar, atualizar, excluir
+- Usuários: criar e listar (senha com BCrypt)
+- Respostas: criar e listar por tópico
+- Documentação: Swagger UI
 
-  `pom.xml`:
-    ```xml
-    <groupId>io.github.brunomuria</groupId>
-    <artifactId>forumhub</artifactId>
+## 🛠 Stack
+Java 17 · Spring Boot 3 · JPA · Security · Auth0 JWT · MySQL · Flyway · Springdoc OpenAPI · Maven · Docker Compose · JUnit/Mockito
 
-
-    *   `README.md`:
-    *   Autor:  Bruno Muria
-    *   GitHub: @brunomuria
-    *   Instruções Docker, Swagger, JWT, testes.
-
-    Docker Compose (MySQL + App)
-
-    Arquivos criados:
-
-*   **Dockerfile** (multi-stage build: Maven → Temurin JRE)
-*   **docker-compose.yml** (serviços `db` e `app`)
-
-Principais configs:
-
-```yaml
-services:
-  db:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: forumhub
-      MYSQL_USER: forumuser
-      MYSQL_PASSWORD: forumpass
-  app:
-    build: .
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/forumhub?useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: forumuser
-      SPRING_DATASOURCE_PASSWORD: forumpass
-      JWT_SECRET: change_me_super_secret
-      JWT_EXPIRATION-HOURS: 2
-    ports:
-      - "8080:8080"
+## ⚙️ Configuração local (sem Docker)
+1. MySQL: crie o banco
+```sql
+CREATE DATABASE forumhub CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
-Testes automatizados (JUnit/Mockito)
+2. `src/main/resources/application.properties` (ajuste usuário/senha):
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/forumhub?useSSL=false&serverTimezone=UTC
+spring.datasource.username=root
+spring.datasource.password=senha
+jwt.secret=uma_chave_super_secreta_e_longa_para_jwt
+jwt.expiration-hours=2
+```
+3. Rode a aplicação:
+```bash
+mvn spring-boot:run
+```
+Flyway executará as migrations e criará um usuário de teste (user@test.com / 123456).
 
+## 🐳 Executar com Docker Compose
+Pré-requisitos: Docker e Docker Compose.
+```bash
+docker compose up --build -d
+```
+A API ficará em `http://localhost:8080` e o MySQL em `localhost:3306`.
 
-*   **`TokenServiceTest`**: garante geração/validação do token JWT.
-*   **`TopicoServiceTest`**: valida regra de **não duplicidade** (mock do repositório).
-*   Perfil de teste usa **H2** (escopo de teste) e desabilita Flyway.
+> Variáveis de ambiente (ajustáveis em `docker-compose.yml`): `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `JWT_SECRET`, `JWT_EXPIRATION-HOURS`.
 
-Comandos:
+## 🔐 Autenticação
+- **Login**: `POST /login`
+```json
+{ "email": "user@test.com", "senha": "123456" }
+```
+Resposta:
+```json
+{ "token": "<JWT>", "tipo": "Bearer" }
+```
+Use o token nas requisições:
+```
+Authorization: Bearer <JWT>
+```
 
+## 📌 Endpoints de Tópicos
+- **POST /topicos** – cria
+- **GET /topicos** – lista (filtros: `?curso=...&ano=...`) com paginação
+- **GET /topicos/{id}** – detalha
+- **PUT /topicos/{id}** – atualiza (valida duplicidade `titulo+mensagem`)
+- **DELETE /topicos/{id}** – exclui
+
+## 📌 Usuários e Respostas
+- **POST /usuario**, **GET /usuario**
+- **POST /respostas**, **GET /respostas?topicoId=1**
+
+## 🧪 Testes automatizados (JUnit/Mockito)
+Rodar testes:
 ```bash
 mvn test
 ```
+Inclui testes de unidade para **TokenService** e **TopicoService**.
 
-***
+## 📖 Swagger UI
+Acesse: `http://localhost:8080/swagger-ui.html`
+OpenAPI: `http://localhost:8080/v3/api-docs`
 
-## Estrutura principal
+## 📂 Estrutura
+```
+src/main/java/com/forumhub
+ ├─ ForumHubApplication.java
+ ├─ SwaggerConfig.java
+ ├─ controller/ (TopicoController, UsuarioController, RespostaController)
+ ├─ dto/ (Topico*, Resposta*, Usuario*)
+ ├─ model/ (Topico, Resposta)
+ ├─ repository/ (TopicoRepository, RespostaRepository)
+ ├─ security/ (Usuario, UsuarioRepository, SecurityConfigurations, TokenService, JwtSecurityFilter, AuthController)
+src/main/resources
+ ├─ application.properties
+ └─ db/migration (V1..V4)
+```
 
-    forumhub/
-     ├─ pom.xml                           # groupId io.github.brunomuria
-     ├─ Dockerfile
-     ├─ docker-compose.yml
-     ├─ .dockerignore
-     ├─ README.md                         # autor + link GitHub + docs
-     ├─ postman/ForumHub.postman_collection.json
-     └─ src/
-        ├─ main/java/com/forumhub/
-        │  ├─ ForumHubApplication.java
-        │  ├─ SwaggerConfig.java
-        │  ├─ controller/
-        │  │  ├─ TopicoController.java
-        │  │  ├─ UsuarioController.java
-        │  │  └─ RespostaController.java
-        │  ├─ dto/
-        │  │  ├─ TopicoDTOs.java
-        │  │  ├─ UsuarioDTOs.java
-        │  │  └─ RespostaDTOs.java
-        │  ├─ model/
-        │  │  ├─ Topico.java
-        │  │  └─ Resposta.java
-        │  ├─ repository/
-        │  │  ├─ TopicoRepository.java
-        │  │  └─ RespostaRepository.java
-        │  ├─ security/
-        │  │  ├─ Usuario.java
-        │  │  ├─ UsuarioRepository.java
-        │  │  ├─ SecurityConfigurations.java
-        │  │  ├─ TokenService.java
-        │  │  ├─ JwtSecurityFilter.java
-        │  │  ├─ AuthController.java
-        │  │  └─ dto/AuthDTOs.java
-        ├─ main/resources/
-        │  ├─ application.properties      # com override por env
-        │  └─ db/migration/
-        │     ├─ V1__create_table_topico.sql
-        │     ├─ V2__create_table_usuario.sql
-        │     ├─ V3__create_table_resposta.sql
-        │     └─ V4__seed_usuario_teste.sql
-        └─ test/
-           ├─ java/com/forumhub/security/TokenServiceTest.java
-           ├─ java/com/forumhub/service/TopicoServiceTest.java
-           └─ resources/application-test.properties
+## 👤 Autor
+**Bruno Daniel Muria de Farias**  
+GitHub: https://github.com/brunomuria
 
-
-
-
+## 🚀 Upload no GitHub
+```bash
+git init
+git add .
+git commit -m "FórumHub API: CRUD + JWT + Swagger + Flyway + Docker Compose + Tests"
+git branch -M main
+git remote add origin https://github.com/brunomuria/forumhub.git
+git push -u origin main
+```
